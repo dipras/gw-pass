@@ -11,7 +11,7 @@ const templateData = {
 };
 
 function App() {
-  const [chiper, setChiper] = useState("");
+  const [cipher, setChiper] = useState("");
   const [passKey, setPassKey] = useState("");
   const [data, setData] = useState(null);
   const [modal, setModal] = useState(false);
@@ -22,16 +22,29 @@ function App() {
   });
   const [selectedData, setSelectedData] = useState(null);
 
+  const generateKeyAndIV = (passKey) => {
+    const saltKey = CryptoJS.SHA256(passKey);
+    const key = CryptoJS.PBKDF2(passKey, saltKey, {
+      keySize: 256 / 32,
+      iterations: 10000
+    });
+
+    const saltIV = "SaltForIv"
+    const iv = CryptoJS.PBKDF2(passKey, saltIV, {
+      keySize: 128 / 32,
+      iterations: 10000
+    });
+
+    return [key, iv]
+  }
+
   const createEncrypted = (data = templateData) => {
     if (passKey == "") {
       alert("Please fill the master password first");
       return;
     }
 
-    const md5 = CryptoJS.MD5(passKey).toString();
-
-    var key = CryptoJS.enc.Utf8.parse(md5.slice(0, 16));
-    let iv = CryptoJS.enc.Utf8.parse(md5.slice(16, 32));
+    const [key,iv] = generateKeyAndIV(passKey)
 
     // Encrypt the plaintext
     var cipherText = CryptoJS.AES.encrypt(JSON.stringify(data), key, {
@@ -44,20 +57,17 @@ function App() {
   }
 
   const openEncrypted = () => {
-    if (passKey == "" || chiper == "") {
+    if (passKey == "" || cipher == "") {
       alert("Please fill the master password and encrypted text first");
       return;
     }
 
-    const md5 = CryptoJS.MD5(passKey).toString();
-    let iv1 = CryptoJS.enc.Utf8.parse(md5.slice(16, 32));
-
-    var key = CryptoJS.enc.Utf8.parse(md5.slice(0, 16));
-    var cipherBytes = CryptoJS.enc.Base64.parse(chiper);
+    const [key, iv] = generateKeyAndIV(passKey)
+    var cipherBytes = CryptoJS.enc.Base64.parse(cipher);
 
     try {
       var decrypted = CryptoJS.AES.decrypt({ ciphertext: cipherBytes }, key, {
-        iv: iv1,
+        iv: iv,
         mode: CryptoJS.mode.CBC,
         padding: CryptoJS.pad.Pkcs7
       });
@@ -141,7 +151,7 @@ function App() {
         <div className="mt-10 flex flex-col gap-5">
           <div>
             <label for="message" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">encrypted Text</label>
-            <textarea id="message" rows="4" class="block p-2.5 w-full text-sm text-gray-900 bg-gray-50 rounded-lg border border-gray-300 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500" placeholder="Enter your hash text" value={chiper} onChange={e => setChiper(e.target.value)}></textarea>
+            <textarea id="message" rows="4" class="block p-2.5 w-full text-sm text-gray-900 bg-gray-50 rounded-lg border border-gray-300 focus:ring-blue-500 focus:border-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500" placeholder="Enter your hash text" value={cipher} onChange={e => setChiper(e.target.value)}></textarea>
             <p id="helper-text-explanation" class="mt-2 text-sm text-gray-500 dark:text-gray-400">If you don't have encrypted data yet, don't fill this form. Fill master password and click "Create New Encrypted"</p>
           </div>
           <div>
@@ -149,7 +159,7 @@ function App() {
             <input type="text" id="first_name" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500" placeholder="Pass Key" value={passKey} onChange={e => setPassKey(e.target.value)} />
             <div className="flex flex-row mt-2 justify-end">
               <button type="button" class="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 me-2 mb-2 dark:bg-blue-600 dark:hover:bg-blue-700 focus:outline-none dark:focus:ring-blue-800" onClick={openEncrypted}>Open Password</button>
-              {chiper == "" && (
+              {cipher == "" && (
                 <button type="button" class="text-white bg-blue-700 hover:bg-blue-800 focus:ring-4 focus:ring-blue-300 font-medium rounded-lg text-sm px-5 py-2.5 me-2 mb-2 dark:bg-blue-600 dark:hover:bg-blue-700 focus:outline-none dark:focus:ring-blue-800" onClick={() => createEncrypted()}>Create New Encrypted</button>
               )}
             </div>
